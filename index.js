@@ -10,22 +10,46 @@ cx.fillRect(0,0 , canvas.width , canvas.height);
 
 class Sprite{
     //object destructuring makes passing argumnets look neat
-    constructor({position , velocity , height=150 , width=55}){
+    constructor({position , velocity , color='red' , offset}){
         this.position = position;
         this.velocity = velocity;
-        this.height = height;
-        this.width = width;
+        this.height = 150
+        this.width=50
+        // this.width = width;
         this.lastKey
+        this.attackBox = {
+            position:{
+                x:this.position.x,
+                y:this.position.y
+            }, 
+            offset,
+            width: 100,
+            height:50
+        }
+        this.color = color
+        this.isAttacking = false
     }
 
     draw(){
-     cx.fillStyle= "red";
-     cx.fillRect(this.position.x , this.position.y , 50 , 150);
+     cx.fillStyle= this.color;
+
+     cx.fillRect(this.position.x , this.position.y , this.width , this.height);
+    
+     //attckBox
+     if(this.isAttacking){
+        cx.fillStyle = 'yellow'
+        cx.fillRect(this.attackBox.position.x , this.attackBox.position.y , this.attackBox.width , this.attackBox.height)
+        }
     }
 
     //updates for each frame
     update(){
         this.draw()
+
+        //needed for shallow copy 
+        this.attackBox.position.x = this.position.x+ this.attackBox.offset.x
+        this.attackBox.position.y  = this.position.y
+
         this.position.y+=this.velocity.y;
         this.position.x+=this.velocity.x;
 
@@ -39,6 +63,14 @@ class Sprite{
         
     }
 
+    
+    attack() {
+        this.isAttacking = true
+        setTimeout(() => {
+            this.isAttacking = false
+        }, 100);
+    }
+
 }
 
 const player = new Sprite({
@@ -47,6 +79,10 @@ const player = new Sprite({
         y:0
     },
     velocity:{
+        x:0,
+        y:0
+    },
+    offset:{
         x:0,
         y:0
     }
@@ -61,6 +97,11 @@ const enemy = new Sprite({
         x:0,
         y:0
     },
+    color : 'blue',
+    offset:{
+        x:-50,
+        y:0
+    }
 });
 
 player.draw();
@@ -79,6 +120,18 @@ const keys = {
     ArrowRight:{
         pressed:false
     }
+}
+
+function rectangularCollision({
+    rectangle1,
+    rectangle2
+}){
+    return (
+        rectangle1.attackBox.position.x+rectangle1.attackBox.width >= rectangle2.position.x &&
+        rectangle1.attackBox.position.x<=rectangle2.position.x+rectangle2.width &&
+        rectangle1.attackBox.position.y + rectangle1.attackBox.height >= rectangle2.position.y &&
+        rectangle1.attackBox.position.y <= rectangle2.position.y+rectangle2.height  
+    )
 }
 
 function animateCallback(){
@@ -104,6 +157,19 @@ function animateCallback(){
         enemy.velocity.x=-5
     }else if(keys.ArrowRight.pressed && enemy.lastKey=='ArrowRight'){
         enemy.velocity.x=5
+    }
+
+    //detect collision
+    //right side of plaayer atackbox >= enemy left side
+    //left side of player attackbox <=enemy right side
+    if(rectangularCollision({rectangle1: player , rectangle2: enemy}) &&  player.isAttacking){
+        player.isAttacking = false
+        console.log("player attacking");
+    }
+    
+    if(rectangularCollision({rectangle1: enemy , rectangle2: player}) &&  enemy.isAttacking){
+        enemy.isAttacking = false
+        console.log("enemy attacking");
     }
 }
 
@@ -160,6 +226,13 @@ addEventListener('keydown' , (event)=>{
         enemy.velocity.y = -20
         break
 
-    }
+        case ' ' : 
+        player.attack()
+        break
+    
+        case 'ArrowDown' : 
+        enemy.attack()
+        break
+        }
     // console.log(event.key);
 });
